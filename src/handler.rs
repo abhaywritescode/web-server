@@ -2,6 +2,7 @@ use std::{eprintln, net::TcpStream};
 use std::io::{Read, Write};
 use std::fs;
 use httparse::{Request, EMPTY_HEADER}; 
+use std::path::Path;
 
 pub fn handle_connection(mut stream: TcpStream) {
     let mut buffer = [0; 4096];
@@ -29,9 +30,26 @@ pub fn handle_connection(mut stream: TcpStream) {
                             "/" => "index.html",
                             path => &path[1..]
                         };
+
+
+                        let file_extension = Path::new(path).extension().and_then(|s| s.to_str()).unwrap_or("");
+
                         let _ = match fs::read_to_string(path) {
                             Ok(body) => {
-                                let response = format!("HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Type: {}\r\n\r\n{}", body.len(), body);
+                                let mut response = String::new();
+                                if file_extension == "html" {
+                                    response = format!("HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Length: {}\r\n\r\n{}", body.len(), body);
+                                }
+                                if file_extension == "css" {
+                                    response = format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\nContent-Type: text/css; charset=UTF-8\r\n\r\n{}", body.len(), body);
+                                }
+                                if file_extension == "js" {
+                                    response = format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\nContent-Type: text/javascript; charset=UTF-8\r\n\r\n{}", body.len(), body);
+                                }
+                                if file_extension == "txt" {
+                                    response = format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n{}", body.len(), body);
+                                }
+
                                 let _ = stream.write_all(response.as_bytes());
                                 break;
                             },
